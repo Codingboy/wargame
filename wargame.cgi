@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.4
+#pip install Flask
 
 import sqlite3
 import os
@@ -12,10 +13,6 @@ from flask import Flask, request, redirect, session, abort, jsonify, url_for
 from werkzeug.serving import run_simple
 from wsgiref.handlers import CGIHandler
 #from flup.server.fcgi import WSGIServer
-#from flask_login import LoginManager
-
-#pip install Flask
-#pip install Flask-Login
 
 host = "192.168.2.105"
 port = 8080
@@ -23,7 +20,6 @@ port = 8080
 PROJECTNAME = "WargameTournament"
 DBNAME = PROJECTNAME+".sqlite"
 
-#init logging
 logger = logging.getLogger(PROJECTNAME)
 logger.setLevel(logging.DEBUG)
 fh = logging.FileHandler(PROJECTNAME+".log")
@@ -36,13 +32,9 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-#initflask
 app = Flask(__name__)
-#login_manager = LoginManager()
-#login_manager.init_app(app)
 UPLOAD_FOLDER = "./static/"
 ALLOWED_EXTENSIONS = set([".wargamerpl2"])
-
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 connection = sqlite3.connect(DBNAME)
@@ -61,11 +53,6 @@ cursor.execute("CREATE TABLE IF NOT EXISTS participates(userID INTEGER, tourname
 cursor.execute("CREATE TABLE IF NOT EXISTS matches(id INTEGER, tournamentID INTEGER, userID1 INTEGER, userID2 INTEGER, deck1 TEXT, deck2 TEXT, replay TEXT, winner INTEGER, map TEXT, PRIMARY KEY(id))")
 connection.commit()
 connection.close()
-
-try:
-	os.mkdir("static")
-except Exception:
-	pass
 
 @app.route("/", methods=["GET"])
 def root():
@@ -324,7 +311,7 @@ def tournament(tournamentID):
 				<div class='tab-pane fade in active' role=tabpanel id=overview aria-labelledby=overview-tab>\n\
 					<script type='text/javascript' class='init'>\n\
 						$(document).ready(function() {\n\
-							$('#table1').DataTable();\n\
+							$('#table1').DataTable({'order':[[4,'desc']]});\n\
 						} );\n\
 					</script>\n\
 					<table id='table1' class='table table-striped'>\n\
@@ -409,7 +396,7 @@ def tournament(tournamentID):
 				text = target.title;\n\
 				if (text != \"\")\n\
 				{\n\
-					window.prompt('Copy to clipboard: Ctrl+C, Enter', text);\n\
+					window.open('https://aqarius90.github.io/FA_WG_Utilities/?='+text, '_self');\n\
 				}\n\
 			}, false);\n\
 		</script>\n"
@@ -477,9 +464,9 @@ def tournament(tournamentID):
 								<td>\n\
 									"+replay+"\n\
 								</td>\n\
-							</tr>\n\
-						</tbody>\n"
+							</tr>\n"
 		html += "\
+						</tbody>\n\
 					</table>\n\
 				</div>\n"
 	html += "\
@@ -545,9 +532,9 @@ def tournament(tournamentID):
 								<td>\n\
 									"+replay+"\n\
 								</td>\n\
-							</tr>\n\
-						</tbody>\n"
+							</tr>\n"
 	html += "\
+						</tbody>\n\
 					</table>\n\
 				</div>\n\
 			</div>\n\
@@ -590,7 +577,7 @@ def match(matchID):
 				return error("Das hochgeladene Replay entspricht nicht den Regeln.")
 		connection = sqlite3.connect(DBNAME)
 		cursor = connection.cursor()
-		cursor.execute("UPDATE matches SET winner=?, replay=?, deck1=?, deck2=?", (winner,str(tournamentID)+"_"+user1+"_"+user2+".wargamerpl2",deck1,deck2,))
+		cursor.execute("UPDATE matches SET winner=?, replay=?, deck1=?, deck2=? WHERE id=?", (winner,str(tournamentID)+"_"+user1+"_"+user2+".wargamerpl2",deck1,deck2,matchID,))
 		connection.commit()
 		connection.close()
 		return redirect(request.url_root+"tournament/"+str(tournamentID), code=302)
@@ -703,21 +690,29 @@ def register():
 				return redirect(request.url_root+"register", code=302)
 	html = beginHTML(request)
 	html += "\
-		<form action='' method='post'>\n\
-			<div class='form-group'>\n\
-				<label for='user'>Benutzer</label>\n\
-				<input type='text' class='form-control' id='user' name='user' placeholder='Benutzer (a-zA-Z0-9)'>\n\
+		<div class='container'>\n\
+			<div class='row'>\n\
+				<div class='col-sx-4'/>\n\
+				<div class='col-sx-4'>\n\
+					<form action='' method='post'>\n\
+						<div class='form-group'>\n\
+							<label for='user'>Benutzer</label>\n\
+							<input type='text' class='form-control' id='user' name='user' placeholder='Benutzer (a-zA-Z0-9)'>\n\
+						</div>\n\
+						<div class='form-group'>\n\
+							<label for='password'>Passwort</label>\n\
+							<input type='password' class='form-control' id='password' name='password' placeholder='Passwort'>\n\
+						</div>\n\
+						<div class='form-group'>\n\
+							<label for='passwordRepeat'>Passwort wiederholen</label>\n\
+							<input type='password' class='form-control' id='passwordRepeat' name='password2' placeholder='Passwort'>\n\
+						</div>\n\
+						<button type='submit' class='btn btn-default'>Registrieren</button>\n\
+					</form>\n\
+				</div>\n\
+				<div class='col-sx-4'/>\n\
 			</div>\n\
-			<div class='form-group'>\n\
-				<label for='password'>Passwort</label>\n\
-				<input type='password' class='form-control' id='password' name='password' placeholder='Passwort'>\n\
-			</div>\n\
-			<div class='form-group'>\n\
-				<label for='passwordRepeat'>Passwort wiederholen</label>\n\
-				<input type='password' class='form-control' id='passwordRepeat' name='password2' placeholder='Passwort'>\n\
-			</div>\n\
-			<button type='submit' class='btn btn-default'>Registrieren</button>\n\
-		</form>\n\
+		</div>\n\
 	</body>\n\
 </html>\n"
 	return html
@@ -734,14 +729,13 @@ def deck():
 			<button type='submit' class='btn btn-default'>Parse</button>\n\
 		</form>\n\
 		<script>\n\
-			function blub(newWin)\n\
-			{\n\
-				newWin.document.getElementById('sDeckString').value = '@Ho8J2ggcyPWcRU6ZKUlhEBvA1GALQDAJkpgEzwG4YuVBEHpKKWxxZyKiVxBH6JMQfBZqWAFYhZJR8i9knsWWiClQiKAieFKKJaA=';\n\
-			}\n\
 			function bla(){\n\
 				var newWin = window.open('https://aqarius90.github.io/FA_WG_Utilities/');\n\
 				newWin.document.getElementById('sDeckString').value = '@Ho8J2ggcyPWcRU6ZKUlhEBvA1GALQDAJkpgEzwG4YuVBEHpKKWxxZyKiVxBH6JMQfBZqWAFYhZJR8i9knsWWiClQiKAieFKKJaA=';\n\
-				newWin.onload = blub(newWin);\n\
+				newWin.onload = function(newWin)\n\
+				{\n\
+					newWin.document.getElementById('sDeckString').value = '@Ho8J2ggcyPWcRU6ZKUlhEBvA1GALQDAJkpgEzwG4YuVBEHpKKWxxZyKiVxBH6JMQfBZqWAFYhZJR8i9knsWWiClQiKAieFKKJaA=';\n\
+				}\n\
 			}\n\
 		</script>\n\
 		<script>document.onload = bla();</script>\n\
@@ -830,7 +824,6 @@ def rules():
 	return html
 
 if __name__ == "__main__":
-	logger.info("started")
 	app.config["SECRET_KEY"] = "BlaBlub42"
 	#run_simple(host, port, app, use_reloader=True)
 	CGIHandler().run(app)
