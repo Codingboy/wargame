@@ -59,9 +59,13 @@ def root():
 	connection = sqlite3.connect(DBNAME)
 	cursor = connection.cursor()
 	dbEntry = cursor.execute("SELECT id FROM tournaments ORDER BY id DESC").fetchone()
-	tournamentID = dbEntry[0]
-	connection.close()
-	return redirect(request.url_root+"tournament/"+str(tournamentID), code=302)
+	if (dbEntry is None):
+		connection.close()
+		return redirect(request.url_root+"rules", code=302)
+	else:
+		tournamentID = dbEntry[0]
+		connection.close()
+		return redirect(request.url_root+"tournament/"+str(tournamentID), code=302)
 
 @app.route("/createTournament", methods=["POST"])
 def createTournament():
