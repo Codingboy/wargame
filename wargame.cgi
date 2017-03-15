@@ -598,12 +598,13 @@ def tournament(tournamentID):
 def match(matchID):
 	connection = sqlite3.connect(DBNAME)
 	cursor = connection.cursor()
-	dbEntry = cursor.execute("SELECT u1.user,u1.id,u2.user,u2.id,matches.tournamentID FROM matches,users as u1,users as u2 WHERE matches.id=? AND u1.id=matches.userID1 AND u2.id=matches.userID2", (matchID,)).fetchone()
+	dbEntry = cursor.execute("SELECT u1.user,u1.id,u2.user,u2.id,matches.tournamentID,matches.winner FROM matches,users as u1,users as u2 WHERE matches.id=? AND u1.id=matches.userID1 AND u2.id=matches.userID2", (matchID,)).fetchone()
 	userID1 = dbEntry[1]
 	userID2 = dbEntry[3]
 	user1 = dbEntry[0]
 	user2 = dbEntry[2]
 	tournamentID = dbEntry[4]
+	winnerID = dbEntry[5]
 	connection.close()
 	if (getUser() != user1 and getUser() != user2 and getPermissions() < 42):
 		abort(401)
@@ -631,24 +632,43 @@ def match(matchID):
 		connection.close()
 		return redirect(request.url_root+"tournament/"+str(tournamentID), code=302)
 	html = beginHTML(request)
+	selected0 = ""
+	selected1 = ""
+	selected2 = ""
+	selected3 = ""
+	if (winnerID == userID1):
+		selected2 = " selected='selected'"
+	elif (winnerID == userID2):
+		selected3 = " selected='selected'"
+	elif (winnerID == 0):
+		selected1 = " selected='selected'"
+	elif (winnerID == -1):
+		selected0 = " selected='selected'"
 	html += "\
-		<form action='' method='post' enctype='multipart/form-data'>\n\
-			<div class='form-group'>\n\
-				<label for='winner'>Sieger</label>\n\
-				<select name='winner' id='winner'>\n\
-					<option value=''></option>\n\
-					<option value='-1'>Ausstehend</option>\n\
-					<option value='0'>Unentschieden</option>\n\
-					<option value='"+str(userID1)+"'>"+user1+"</option>\n\
-					<option value='"+str(userID2)+"'>"+user2+"</option>\n\
-				</select>\
+		<div class='container'>\n\
+			<div class='row'>\n\
+				<div class='col-xs-4'></div>\n\
+				<div class='col-xs-4'>\n\
+					<form action='' method='post' enctype='multipart/form-data'>\n\
+						<div class='form-group'>\n\
+							<label for='winner'>Sieger</label>\n\
+							<select name='winner' id='winner'>\n\
+								<option value='-1'"+selected0+">Ausstehend</option>\n\
+								<option value='0'"+selected1+">Unentschieden</option>\n\
+								<option value='"+str(userID1)+"'"+selected2+">"+user1+"</option>\n\
+								<option value='"+str(userID2)+"'"+selected3+">"+user2+"</option>\n\
+							</select>\
+						</div>\n\
+						<div class='form-group'>\n\
+							<label for='replay'>Replay</label>\n\
+							<input type='file' id='file' name='replay' accept='.wargamerpl2'>\n\
+						</div>\n\
+						<button type='submit' class='btn btn-default'>Senden</button>\n\
+					</form>\n\
+				</div>\n\
+				<div class='col-xs-4'></div>\n\
 			</div>\n\
-			<div class='form-group'>\n\
-				<label for='replay'>Replay</label>\n\
-				<input type='file' id='file' name='replay' accept='.wargamerpl2'>\n\
-			</div>\n\
-			<button type='submit' class='btn btn-default'>Senden</button>\n\
-		</form>\n\
+		</div>\n\
 	</body>\n\
 </html>\n"
 	return html
