@@ -319,7 +319,6 @@ def tournament(tournamentID):
 				myMaps[randomMap] = myMaps[randomMap] + 1
 				conn.close()
 				cursor.execute("INSERT INTO matches (tournamentID, userID1, userID2, winner, deck1, deck2, map, replay) VALUES(?, ?, ?, -1, '', '', ?, '')", (tournamentID, userID, dbEntry[0], randomMap,))
-			cursor.execute("INSERT INTO participates (tournamentID, userID) VALUES(?, ?)", (tournamentID, userID,))
 			connection.commit()
 			connection.close()
 			logging.getLogger(PROJECTNAME).info(str(userID)+" participates in "+str(tournamentID))
@@ -497,6 +496,8 @@ def tournament(tournamentID):
 			if (dbEntry[5] == 0):
 				winner = "Unentschieden"
 			if (getUser() == dbEntry[0] or getUser() == dbEntry[2] or getPermissions() >= 42):
+				logger.info(dbEntry[0])
+				logger.info(dbEntry[2])
 				html += "\
 									<a href='"+request.url_root+"match/"+str(dbEntry[7])+"'>"+winner+"</a>\n"
 			else:
@@ -861,7 +862,7 @@ def rules():
 					Opposition: so zu wählen, dass beide Spieler ihre festgelegten Decks wählen können<br/>\n\
 					Accessibility: private<br/>\n\
 					Starting points: "+str(ruleMoney)+"<br/>\n\
-					Conquest points: "+str(ruleMoney)+"<br/>\n\
+					Conquest points: "+str(ruleConquestpoints)+"<br/>\n\
 					Time limit: "+str(int(ruleTimelimit/60))+" min<br/>\n\
 					Income rate: Very low (4)<br/>\n\
 					</p>\n\
