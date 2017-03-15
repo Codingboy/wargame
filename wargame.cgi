@@ -16,6 +16,13 @@ from wsgiref.handlers import CGIHandler
 
 host = "192.168.2.105"
 port = 8080
+ruleMaps = {"Mud Fight !":"Conquete_2x3_Gangjin","Nuclear Winter is coming":"Conquete_2x3_Hwaseong","Wonsan harbour":"Conquete_2x2_port_Wonsan_Terrestre","Plunjing Valley":"Conquete_3x3_Muju","Death Row":"Conquete_2x3_Montagne_1","Paddy Field":"Conquete_2x3_Tohoku_Alt"}
+ruleMoney = 1000
+ruleGamemode = 1
+ruleTimelimit = 3600
+ruleGametype = 1
+ruleConquestpoints = 500
+ruleIncome = 1
 
 PROJECTNAME = "wargame"
 DBNAME = PROJECTNAME+".sqlite"
@@ -82,7 +89,7 @@ def createTournament():
 			logging.getLogger(PROJECTNAME).info("tournament created")
 			return redirect(request.url_root, code=302)
 
-def parseReplay(path):
+def parseReplay(path, matchID):
 	ret = []
 	if (os.path.isfile(path)):
 		file = open(path, "rb")
@@ -111,7 +118,11 @@ def parseReplay(path):
 		timeLimit = parsed["game"]["TimeLimit"]
 		conquestPoints = parsed["game"]["ScoreLimit"]
 		income = parsed["game"]["IncomeRate"]
-		if (startMoney != "1000" or gameMode != "1" or field not in ["Conquete_2x2_port_Wonsan_Terrestre","Conquete_3x3_Muju","Conquete_2x3_Montagne_1","Conquete_2x3_Gangjin","Conquete_2x3_Tohoku_Alt","Conquete_2x3_Hwaseong"] or timeLimit != "3600" or gameType != "1" or conquestPoints != "500" or income != "1"):
+		connection = sqlite3.connect(DBNAME)
+		cursor = connection.cursor()
+		ruleMap = cursor.execute("SELECT map FROM matches WHERE id=?", (matchID,)).fetchone()[0]
+		connection.close()
+		if (startMoney != str(ruleMoney) or gameMode != str(ruleGamemode) or timeLimit != str(ruleTimelimit) or gameType != str(ruleGametype) or conquestPoints != str(ruleConquestpoints) or income != str(ruleIncome) or field != ruleField):
 			return []
 		for i in range(0,20):
 			if ("player_"+str(i) in parsed):
@@ -282,11 +293,15 @@ def tournament(tournamentID):
 			cursor = connection.cursor()
 			userID = cursor.execute("SELECT id FROM users WHERE user=?", (getUser(),)).fetchone()[0]
 			dbEntries = cursor.execute("SELECT userID FROM participates WHERE tournamentID=?", (tournamentID,)).fetchall()
-			myMaps = {"Mud Fight !":0,"Nuclear Winter is coming":0,"Wonsan harbour":0,"Plunjing Valley":0,"Death Row":0,"Paddy Field":0}
+			myMaps = {}
+			for key in ruleMaps:
+				myMaps[key] = 0
 			for dbEntry in dbEntries:
 				conn = sqlite3.connect(DBNAME)
 				cur = conn.cursor()
-				maps = {"Mud Fight !":0,"Nuclear Winter is coming":0,"Wonsan harbour":0,"Plunjing Valley":0,"Death Row":0,"Paddy Field":0}
+				maps = {}
+				for key in ruleMaps:
+					maps[key] = 0
 				entries = cur.execute("SELECT map FROM matches WHERE tournamentID=? AND (userID1=? OR userID2=?)", (tournamentID,dbEntry[0],dbEntry[0],)).fetchall()
 				for entry in entries:
 					maps[entry[0]] = maps[entry[0]] + 1
@@ -598,7 +613,7 @@ def match(matchID):
 		replay = request.files["replay"]
 		if (replay.filename != ""):
 			replay.save(os.path.join(app.config["UPLOAD_FOLDER"], str(tournamentID)+"_"+user1+"_"+user2+".wargamerpl2"))
-			replayData = parseReplay(app.config["UPLOAD_FOLDER"]+str(tournamentID)+"_"+user1+"_"+user2+".wargamerpl2")
+			replayData = parseReplay(app.config["UPLOAD_FOLDER"]+str(tournamentID)+"_"+user1+"_"+user2+".wargamerpl2", matchID)
 			deck1 = ""
 			deck2 = ""
 			for data in replayData:
@@ -749,30 +764,67 @@ def register():
 	html += endHTML(request)
 	return html
 
-@app.route("/deck", methods=["GET"])
+@app.route("/decks", methods=["GET"])
 def deck():
 	html = beginHTML(request)
 	html += "\
-		<form action='' method='post'>\n\
-			<div class='form-group'>\n\
-				<label for='deck'>Deck</label>\n\
-				<input type='text' class='form-control' id='deck' name='deck' placeholder='Deck'>\n\
+		<div class='container'>\n\
+			<div class='row'>\n\
+				<div class='col-xs-1'></div>\n\
+				<div class='col-xs-10'>\n\
+					<h3>Bewährte Decks</h3>\n\
+					<p>\n\
+						<a href='https://aqarius90.github.io/FA_WG_Utilities/?=@Ho8J2ggcyPWcRU6ZKUlhEBvA1GALQDAJkpgEzxrIYuVBEopbHFnIqJXEEfokxB8FmpYAViFklHyL2SexZaIKVCIoCJ4UoolpEsA='>USA/CAN @Ho8J2ggcyPWcRU6ZKUlhEBvA1GALQDAJkpgEzxrIYuVBEopbHFnIqJXEEfokxB8FmpYAViFklHyL2SexZaIKVCIoCJ4UoolpEsA=</a><br/>\n\
+						<ul>\n\
+							<li>Extreme AA-Reichweite</li>\n\
+							<li>Schlechte Eliteinfantrie</li>\n\
+							<li>Wenige Bomber</li>\n\
+							<li>Gute Bomber</li>\n\
+							<li>Sniper Artillery</li>\n\
+							<li>Unsichtbarer Bomber</li>\n\
+							<li>Guter AA-Heli</li>\n\
+							<li>SEAD-Heli</li>\n\
+						</ul>\n\
+					</p>\n\
+					<hr/>\n\
+					<p>\n\
+						<a href='https://aqarius90.github.io/FA_WG_Utilities/?=@Hp8BiI8kcds+1iGPhGZHwZnmxIzxIyKAmBDGEE1PjT5y/BPzTEU70uvQzkPQv2SXCPkvFT+CxIvKKW0QRI/iNoswo+CsQA=='>NL/GER @Hp8BiI8kcds+1iGPhGZHwZnmxIzxIyKAmBDGEE1PjT5y/BPzTEU70uvQzkPQv2SXCPkvFT+CxIvKKW0QRI/iNoswo+CsQA==</a><br/>\n\
+						<ul>\n\
+							<li>Gute Eliteinfantrie</li>\n\
+							<li>Brauchbare Panzer gegen Infantrie</li>\n\
+							<li>NON-Radar-LR-AA</li>\n\
+							<li>Guter Scouttank</li>\n\
+							<li>Guter Antitankheli</li>\n\
+							<li>Mittelmäßige Bo,ber</li>\n\
+						</ul>\n\
+					</p>\n\
+					<hr/>\n\
+					<p>\n\
+						<a href='https://aqarius90.github.io/FA_WG_Utilities/?=@Hh8CC4hFJY4dlmRcw3BNORnDxxtjaEP5wyNS3ItwDGU3kp1LaS28t9RlE6YuiTey6EsPTmy2pN6JME2ctrDnAA=='>DEN/SWE/NOR @Hh8CC4hFJY4dlmRcw3BNORnDxxtjaEP5wyNS3ItwDGU3kp1LaS28t9RlE6YuiTey6EsPTmy2pN6JME2ctrDnAA==</a><br/>\n\
+						<ul>\n\
+							<li>Schnell schießende Artillerie</li>\n\
+							<li>Hohe Schussfrequenz der Artillerie/Mörser</li>\n\
+							<li>NON-Radar-LR-AA</li>\n\
+							<li>Anti-Alles-AA</li>\n\
+							<li>Panzer mit hoher Schussfrequenz kann nicht aus dem fahren schießen</li>\n\
+							<li>Gute Feuerunterstützungsfahrzeuge</li>\n\
+							<li>Schlechte Helis</li>\n\
+							<li>Kein AA-Heli</li>\n\
+							<li>Schlechter SEAD</li>\n\
+						</ul>\n\
+					</p>\n\
+					<hr/>\n\
+					<p>\n\
+						<a href='https://aqarius90.github.io/FA_WG_Utilities/?=@UlEDoptVsEIquCEVWU2qtilzcxWSwopQd0UoO6GQNS1LGoaljUJSo7onhVcVkakiQCaSrtETRB2qNKzR5GD9iPYz0glHxKzYsspRKU0kdEhSnWIw'>GER/POL/CZ @UlEDoptVsEIquCEVWU2qtilzcxWSwopQd0UoO6GQNS1LGoaljUJSo7onhVcVkakiQCaSrtETRB2qNKzR5GD9iPYz0glHxKzYsspRKU0kdEhSnWIw</a><br/>\n\
+						<ul>\n\
+							<li>Ein Wort: INFANTRIE</li>\n\
+						</ul>\n\
+					</p>\n\
+				</div>\n\
+				<div class='col-xs-1'></div>\n\
 			</div>\n\
-			<button type='submit' class='btn btn-default'>Parse</button>\n\
-		</form>\n\
-		<script>\n\
-			function bla(){\n\
-				var newWin = window.open('https://aqarius90.github.io/FA_WG_Utilities/');\n\
-				newWin.document.getElementById('sDeckString').value = '@Ho8J2ggcyPWcRU6ZKUlhEBvA1GALQDAJkpgEzwG4YuVBEHpKKWxxZyKiVxBH6JMQfBZqWAFYhZJR8i9knsWWiClQiKAieFKKJaA=';\n\
-				newWin.onload = function(newWin)\n\
-				{\n\
-					newWin.document.getElementById('sDeckString').value = '@Ho8J2ggcyPWcRU6ZKUlhEBvA1GALQDAJkpgEzwG4YuVBEHpKKWxxZyKiVxBH6JMQfBZqWAFYhZJR8i9knsWWiClQiKAieFKKJaA=';\n\
-				}\n\
-			}\n\
-		</script>\n\
-		<script>document.onload = bla();</script>\n\
-	</body>\n\
-</html>\n"
+		</div>\n"
+	html += endHTML(request)
 	return html
 
 
@@ -786,13 +838,11 @@ def rules():
 				<div class='col-xs-10'>\n\
 					<h3>Map</h3>\n\
 					<p>\n\
-					Die gespielte Map muss eine der folgenden sein:<br/>\n\
-					Mud Fight !<br/>\n\
-					Nuclear Winter is coming<br/>\n\
-					Wonsan harbour<br/>\n\
-					Plunjing Valley<br/>\n\
-					Death Row<br/>\n\
-					Paddy Field<br/>\n\
+					Die gespielte Map muss eine der folgenden sein:<br/>\n"
+	for key in ruleMaps:
+		html += "\
+					"+key+"<br/>\n"
+	html += "\
 					<br/>\n\
 					Jedem Match ist zufällig eine Map zugewiesen, die gespielt werden muss.<br/>\n\
 					</p>\n\
@@ -810,9 +860,9 @@ def rules():
 					Game mode: conquest<br/>\n\
 					Opposition: so zu wählen, dass beide Spieler ihre festgelegten Decks wählen können<br/>\n\
 					Accessibility: private<br/>\n\
-					Starting points: 1000<br/>\n\
-					Conquest points: 500<br/>\n\
-					Time limit: 60 min<br/>\n\
+					Starting points: "+str(ruleMoney)+"<br/>\n\
+					Conquest points: "+str(ruleMoney)+"<br/>\n\
+					Time limit: "+str(int(ruleTimelimit/60))+" min<br/>\n\
 					Income rate: Very low (4)<br/>\n\
 					</p>\n\
 					<hr/>\n\
@@ -830,8 +880,10 @@ def rules():
 					der Opponent gibt auf oder<br/>\n\
 					das Zeitlimit endet und man hat mehr Conquestpunkte als der Opponent dann<br/>\n\
 					wird dies als Sieg gewertet.<br/>\n\
+					<br/>\n\
 					Endet das Zeitlimit und man hat die gleiche Anzahl an Conquestpunkten wie der Opponent dann<br/>\n\
 					wird dies als Unentschieden gewertet.<br/>\n\
+					<br/>\n\
 					Hat man keine eigenen CVs mehr oder<br/>\n\
 					erreicht der Opponent die vorgegebene Anzahl an Conquestpunkten oder<br/>\n\
 					man gibt auf oder<br/>\n\
