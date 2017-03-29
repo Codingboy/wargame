@@ -16,7 +16,7 @@ from wsgiref.handlers import CGIHandler
 
 host = "192.168.2.105"
 port = 8080
-ruleMaps = {"Mud Fight !":"Conquete_2x3_Gangjin","Nuclear Winter is coming":"Conquete_2x3_Hwaseong","Wonsan harbour":"Conquete_2x2_port_Wonsan_Terrestre","Plunjing Valley":"Conquete_3x3_Muju","Death Row":"Conquete_2x3_Montagne_1","Paddy Field":"Conquete_2x3_Tohoku_Alt"}
+ruleMaps = {"Mud Fight !":"Conquete_2x3_Gangjin","Wonsan harbour":"Conquete_2x2_port_Wonsan_Terrestre","Plunjing Valley":"Conquete_3x3_Muju","Death Row":"Conquete_2x3_Montagne_1","Paddy Field":"Conquete_2x3_Tohoku_Alt"}
 ruleMoney = 1000
 ruleGamemode = 1
 ruleTimelimit = 3600
@@ -122,7 +122,7 @@ def parseReplay(path, matchID):
 		cursor = connection.cursor()
 		ruleMap = cursor.execute("SELECT map FROM matches WHERE id=?", (matchID,)).fetchone()[0]
 		connection.close()
-		if (startMoney != str(ruleMoney) or gameMode != str(ruleGamemode) or timeLimit != str(ruleTimelimit) or gameType != str(ruleGametype) or conquestPoints != str(ruleConquestpoints) or income != str(ruleIncome) or field != ruleField):
+		if (startMoney != str(ruleMoney) or gameMode != str(ruleGamemode) or timeLimit != str(ruleTimelimit) or gameType != str(ruleGametype) or conquestPoints != str(ruleConquestpoints) or income != str(ruleIncome) or field != ruleMaps[ruleMap]):
 			return []
 		for i in range(0,20):
 			if ("player_"+str(i) in parsed):
@@ -319,6 +319,7 @@ def tournament(tournamentID):
 				myMaps[randomMap] = myMaps[randomMap] + 1
 				conn.close()
 				cursor.execute("INSERT INTO matches (tournamentID, userID1, userID2, winner, deck1, deck2, map, replay) VALUES(?, ?, ?, -1, '', '', ?, '')", (tournamentID, userID, dbEntry[0], randomMap,))
+			cursor.execute("INSERT INTO participates (userID, tournamentID) VALUES(?, ?)", (userID, tournamentID,))
 			connection.commit()
 			connection.close()
 			logging.getLogger(PROJECTNAME).info(str(userID)+" participates in "+str(tournamentID))
